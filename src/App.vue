@@ -41,10 +41,42 @@ onMounted(() => {
 
 const language = ref('json')
 const mode = ref('beautify')
-const input = ref('')
+const input = ref(`{"merge_config":{"rule_1":{"type":"join","left":423,"join_config":{"join_1":{"right":"file_2","on":[2,3,5,3],"how":true},"join_2":{"right":"file_3","on":[1,4],"how":false}}},"rule_2":{"type":"union","sources":["file_a","file_b","file_c"]}}}`)
 const error = ref('')
 
 const hasInput = computed(() => input.value.trim().length > 0)
+
+// Output card horizontal position (percentage from left of viewport).
+// 75% → output occupies right 25% of screen; 50% → output occupies right 50%.
+const outputLeftPct = ref(75)
+const userResized = ref(false)
+const isResizing = ref(false)
+watch(hasInput, (val) => {
+  if (userResized.value) return
+  outputLeftPct.value = val ? 50 : 75
+})
+
+function startResize(e) {
+  e.preventDefault()
+  userResized.value = true
+  isResizing.value = true
+  const onMove = (ev) => {
+    const x = ev.touches ? ev.touches[0].clientX : ev.clientX
+    const pct = (x / window.innerWidth) * 100
+    outputLeftPct.value = Math.min(85, Math.max(15, pct))
+  }
+  const onUp = () => {
+    isResizing.value = false
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+    window.removeEventListener('touchmove', onMove)
+    window.removeEventListener('touchend', onUp)
+  }
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
+  window.addEventListener('touchmove', onMove)
+  window.addEventListener('touchend', onUp)
+}
 
 const output = computed(() => {
   try {
@@ -126,7 +158,11 @@ function clearAll() {
       </header>
 
       <!-- Editor area: gutter + textarea -->
-      <div class="flex-1 flex overflow-hidden relative">
+      <div
+        class="flex-1 flex overflow-hidden relative"
+        :class="isResizing ? '' : 'transition-[width] duration-500 ease-in-out'"
+        :style="{ width: outputLeftPct + 'vw' }"
+      >
         <div
           ref="inputGutter"
           class="w-12 shrink-0 overflow-hidden bg-indigo-300/40 dark:bg-black/20 text-right font-mono text-xs leading-relaxed text-indigo-600/70 dark:text-indigo-400/50 select-none py-5"
@@ -191,9 +227,18 @@ function clearAll() {
 
     <!-- OUTPUT PANE — floats over input with rounded corners -->
     <section
-      class="absolute top-4 bottom-4 right-4 z-30 flex flex-col bg-white dark:bg-[#282c34] rounded-3xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden transition-all duration-500 ease-in-out"
-      :class="hasInput ? 'left-[34%]' : 'left-1/2'"
+      class="absolute top-4 bottom-4 right-4 z-30 flex flex-col bg-white dark:bg-[#282c34] rounded-3xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden"
+      :class="isResizing ? '' : 'transition-[left] duration-500 ease-in-out'"
+      :style="{ left: outputLeftPct + '%' }"
     >
+      <!-- Drag handle to resize -->
+      <div
+        @mousedown="startResize"
+        @touchstart="startResize"
+        class="absolute top-0 left-0 h-full w-2 cursor-col-resize z-20 group"
+      >
+        <div class="absolute top-1/2 -translate-y-1/2 left-0 w-1 h-12 rounded-full bg-slate-300 dark:bg-white/20 group-hover:bg-indigo-500 transition" />
+      </div>
       <header class="sticky top-0 z-10 px-6 py-4 bg-white/95 dark:bg-[#282c34]/95 backdrop-blur border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
         <div>
           <h2 class="text-lg font-bold text-brand-dark dark:text-white tracking-tight">Output</h2>
