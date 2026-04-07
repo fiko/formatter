@@ -60,14 +60,22 @@ onMounted(() => {
 
 const language = ref('json')
 const mode = ref('beautify')
-const input = ref(`{"merge_config":{"rule_1":{"type":"join","left":423,"join_config":{"join_1":{"right":"file_2","on":[2,3,5,3],"how":true},"join_2":{"right":"file_3","on":[1,4],"how":false}}},"rule_2":{"type":"union","sources":["file_a","file_b","file_c"]}}}`)
+const input = ref('')
+const SAMPLES = {
+  json: `{"Name":"John Doe","Sample":"Paste your JSON, XML or JavaScript here..."}`,
+  xml: `<?xml version="1.0"?><user><name>John Doe</name><sample>Paste your JSON, XML or JavaScript here...</sample></user>`,
+  js: `function greet(name){const msg="Hello, "+name+"!";console.log(msg);return msg;}greet("John Doe");`,
+}
+function useSample() {
+  input.value = SAMPLES[language.value] || SAMPLES.json
+}
 const error = ref('')
 
 const hasInput = computed(() => input.value.trim().length > 0)
 
 // Output card horizontal position (percentage from left of viewport).
 // 75% → output occupies right 25% of screen; 50% → output occupies right 50%.
-const outputLeftPct = ref(75)
+const outputLeftPct = ref(input.value.trim().length > 0 ? 50 : 75)
 const userResized = ref(false)
 const isResizing = ref(false)
 watch(hasInput, (val) => {
@@ -165,7 +173,19 @@ function clearAll() {
       <!-- Sticky header -->
       <header class="sticky top-0 z-20 px-6 py-4 bg-indigo-200/95 dark:bg-brand-dark/95 backdrop-blur border-b border-indigo-300/50 dark:border-white/10 flex items-center justify-between">
         <div>
-          <h1 class="text-lg font-bold tracking-tight">Code Formatter <span class="text-indigo-500 dark:text-indigo-400 font-normal">(by Fiko)</span></h1>
+          <h1 class="text-lg font-bold tracking-tight flex items-center gap-2">
+            Code Formatter
+            <span class="text-indigo-500 dark:text-indigo-400 font-normal">(by Fiko)</span>
+            <a
+              href="https://github.com/fiko/formatter"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-indigo-700 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-white transition"
+              title="View on GitHub"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.07 11.07 0 015.79 0c2.21-1.49 3.18-1.18 3.18-1.18.62 1.59.23 2.76.11 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.41-5.25 5.69.41.36.78 1.06.78 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.73 18.27.5 12 .5z"/></svg>
+            </a>
+          </h1>
           <p class="text-xs text-indigo-700/70 dark:text-indigo-300/70">JSON · XML · JavaScript</p>
         </div>
         <button
@@ -194,6 +214,13 @@ function clearAll() {
             {{ n }}
           </div>
         </div>
+        <button
+          v-if="!hasInput"
+          @click="useSample"
+          class="absolute top-[20%] left-1/2 -translate-x-1/2 z-10 px-5 py-2.5 rounded-full bg-indigo-500 text-white text-sm font-medium shadow-lg hover:bg-indigo-600 transition"
+        >
+          Try Sample Code
+        </button>
         <textarea
           ref="inputArea"
           v-model="input"
