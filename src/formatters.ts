@@ -1,22 +1,26 @@
 // Lightweight formatters for JSON, XML and JavaScript.
 
-function resolveIndent(indent) {
+export type Language = 'json' | 'xml' | 'js'
+export type Mode = 'beautify' | 'minify'
+export type Indent = number | string // number of spaces, or 'tab'
+
+function resolveIndent(indent: Indent): string {
   if (indent === 'tab' || indent === '\t') return '\t'
   const n = Number(indent)
   return ' '.repeat(Number.isFinite(n) && n > 0 ? n : 2)
 }
 
-export function beautifyJSON(input, indent = 2) {
+export function beautifyJSON(input: string, indent: Indent = 2): string {
   const obj = JSON.parse(input)
   return JSON.stringify(obj, null, resolveIndent(indent))
 }
 
-export function minifyJSON(input) {
+export function minifyJSON(input: string): string {
   const obj = JSON.parse(input)
   return JSON.stringify(obj)
 }
 
-export function minifyXML(input) {
+export function minifyXML(input: string): string {
   return input
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/>\s+</g, '><')
@@ -24,7 +28,7 @@ export function minifyXML(input) {
     .trim()
 }
 
-export function beautifyXML(input, indent = 2) {
+export function beautifyXML(input: string, indent: Indent = 2): string {
   const xml = minifyXML(input)
   const PADDING = resolveIndent(indent)
   let formatted = ''
@@ -46,7 +50,7 @@ export function beautifyXML(input, indent = 2) {
   return formatted.trim()
 }
 
-export function minifyJS(input) {
+export function minifyJS(input: string): string {
   return input
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/(^|[^:])\/\/.*$/gm, '$1')
@@ -55,12 +59,12 @@ export function minifyJS(input) {
     .trim()
 }
 
-export function beautifyJS(input, indent = 2) {
+export function beautifyJS(input: string, indent: Indent = 2): string {
   const src = minifyJS(input)
   const PAD = resolveIndent(indent)
   let out = ''
   let depth = 0
-  const pad = () => PAD.repeat(depth)
+  const pad = (): string => PAD.repeat(depth)
   let inString = false
   let stringCh = ''
   for (let i = 0; i < src.length; i++) {
@@ -92,7 +96,12 @@ export function beautifyJS(input, indent = 2) {
   return out.replace(/\n\s*\n/g, '\n').trim()
 }
 
-export function format(language, mode, input, indent = 2) {
+export function format(
+  language: Language,
+  mode: Mode,
+  input: string,
+  indent: Indent = 2
+): string {
   if (!input.trim()) return ''
   if (language === 'json')
     return mode === 'minify' ? minifyJSON(input) : beautifyJSON(input, indent)

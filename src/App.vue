@@ -1,6 +1,6 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { format } from './formatters.js'
+import { format, type Language, type Mode, type Indent } from './formatters'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
 import xml from 'highlight.js/lib/languages/xml'
@@ -13,13 +13,14 @@ hljs.registerLanguage('xml', xml)
 hljs.registerLanguage('javascript', javascript)
 
 // Theme handling — initial value matches localStorage > system preference
-const theme = ref('light')
-function applyTheme(t) {
+type Theme = 'light' | 'dark'
+const theme = ref<Theme>('light')
+function applyTheme(t: Theme): void {
   theme.value = t
   const root = document.documentElement
   if (t === 'dark') root.classList.add('dark')
   else root.classList.remove('dark')
-  let styleEl = document.getElementById('hljs-theme')
+  let styleEl = document.getElementById('hljs-theme') as HTMLStyleElement | null
   if (!styleEl) {
     styleEl = document.createElement('style')
     styleEl.id = 'hljs-theme'
@@ -28,16 +29,16 @@ function applyTheme(t) {
   styleEl.textContent = t === 'dark' ? darkTheme : lightTheme
   localStorage.setItem('theme', t)
 }
-function toggleTheme() {
+function toggleTheme(): void {
   applyTheme(theme.value === 'dark' ? 'light' : 'dark')
 }
 // Mobile detection
 const isMobile = ref(false)
-let mqlTheme = null
+let mqlTheme: MediaQueryList | null = null
 onMounted(() => {
   mqlTheme = window.matchMedia('(max-width: 767px)')
   isMobile.value = mqlTheme.matches
-  mqlTheme.addEventListener('change', (e) => (isMobile.value = e.matches))
+  mqlTheme.addEventListener('change', (e: MediaQueryListEvent) => (isMobile.value = e.matches))
 })
 onUnmounted(() => {
   if (mqlTheme) mqlTheme.onchange = null
@@ -51,39 +52,38 @@ const editorStyle = computed(() =>
 )
 
 onMounted(() => {
-  const stored = localStorage.getItem('theme')
+  const stored = localStorage.getItem('theme') as Theme | null
   const prefersDark =
     window.matchMedia &&
     window.matchMedia('(prefers-color-scheme: dark)').matches
-  applyTheme(stored || (prefersDark ? 'dark' : 'light'))
+  applyTheme(stored ?? (prefersDark ? 'dark' : 'light'))
 })
 
 // Parse URL path → { mode, language }
 // Supported: /, /json, /xml, /javascript, /minify, /minify/json, /minify/xml, /minify/javascript
-const SLUG_MAP = { json: 'json', xml: 'xml', javascript: 'js', js: 'js' }
-const KNOWN_LANGS = new Set(Object.keys(SLUG_MAP))
 
-function parsePath(pathname) {
+type ParsedPath = { mode: Mode; language: Language; notFound: boolean }
+const SLUG_TO_LANG: Record<string, Language> = { json: 'json', xml: 'xml', javascript: 'js', js: 'js' }
+
+function parsePath(pathname: string): ParsedPath {
   const parts = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean)
   if (parts.length === 0) return { mode: 'beautify', language: 'json', notFound: false }
 
-  let m = 'beautify'
-  let langSlug = 'json'
+  let m: Mode = 'beautify'
   let rest = parts
 
   if (parts[0] === 'minify' || parts[0] === 'beautify') {
-    m = parts[0]
+    m = parts[0] as Mode
     rest = parts.slice(1)
     if (rest.length === 0) {
       return { mode: m, language: 'json', notFound: false }
     }
   }
 
-  if (rest.length !== 1 || !KNOWN_LANGS.has(rest[0])) {
+  if (rest.length !== 1 || !(rest[0] in SLUG_TO_LANG)) {
     return { mode: 'beautify', language: 'json', notFound: true }
   }
-  langSlug = rest[0]
-  return { mode: m, language: SLUG_MAP[langSlug], notFound: false }
+  return { mode: m, language: SLUG_TO_LANG[rest[0]], notFound: false }
 }
 
 const initial =
@@ -92,12 +92,12 @@ const initial =
     : { mode: 'beautify', language: 'json', notFound: false }
 const notFound = ref(initial.notFound)
 
-const language = ref(initial.language)
-const mode = ref(initial.mode)
-const indent = ref('2')
+const language = ref<Language>(initial.language)
+const mode = ref<Mode>(initial.mode)
+const indent = ref<Indent>('2')
 
 // Keep URL in sync when user changes language/mode
-function syncUrl() {
+function syncUrl(): void {
   if (typeof window === 'undefined' || notFound.value) return
   const langSlug = language.value === 'js' ? 'javascript' : language.value
   const path =
@@ -108,19 +108,19 @@ function syncUrl() {
 }
 watch([language, mode], syncUrl)
 
-function goHome() {
+function goHome(): void {
   notFound.value = false
   language.value = 'json'
   mode.value = 'beautify'
   window.history.replaceState(null, '', '/')
 }
 const input = ref('')
-const SAMPLES = {
+const SAMPLES: Record<Language, string> = {
   json: `{"Name":"John Doe","Sample":"Paste your JSON, XML or JavaScript here..."}`,
   xml: `<?xml version="1.0"?><user><name>John Doe</name><sample>Paste your JSON, XML or JavaScript here...</sample></user>`,
   js: `function greet(name){const msg="Hello, "+name+"!";console.log(msg);return msg;}greet("John Doe");`,
 }
-function useSample() {
+function useSample(): void {
   input.value = SAMPLES[language.value] || SAMPLES.json
 }
 const error = ref('')
@@ -129,7 +129,7 @@ const hasInput = computed(() => input.value.trim().length > 0)
 
 // Output card horizontal position (percentage from left of viewport).
 // 75% → output occupies right 25% of screen; 50% → output occupies right 50%.
-const outputLeftPct = ref(input.value.trim().length > 0 ? 50 : 75)
+const outputLeftPct = ref<number>(input.value.trim().length > 0 ? 50 : 75)
 const userResized = ref(false)
 const isResizing = ref(false)
 watch(hasInput, (val) => {
@@ -137,25 +137,25 @@ watch(hasInput, (val) => {
   outputLeftPct.value = val ? 50 : 75
 })
 
-function startResize(e) {
+function startResize(e: MouseEvent | TouchEvent): void {
   e.preventDefault()
   userResized.value = true
   isResizing.value = true
-  const onMove = (ev) => {
-    const x = ev.touches ? ev.touches[0].clientX : ev.clientX
+  const onMove = (ev: MouseEvent | TouchEvent): void => {
+    const x = 'touches' in ev ? ev.touches[0].clientX : (ev as MouseEvent).clientX
     const pct = (x / window.innerWidth) * 100
     outputLeftPct.value = Math.min(85, Math.max(15, pct))
   }
-  const onUp = () => {
+  const onUp = (): void => {
     isResizing.value = false
-    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mousemove', onMove as EventListener)
     window.removeEventListener('mouseup', onUp)
-    window.removeEventListener('touchmove', onMove)
+    window.removeEventListener('touchmove', onMove as EventListener)
     window.removeEventListener('touchend', onUp)
   }
-  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mousemove', onMove as EventListener)
   window.addEventListener('mouseup', onUp)
-  window.addEventListener('touchmove', onMove)
+  window.addEventListener('touchmove', onMove as EventListener)
   window.addEventListener('touchend', onUp)
 }
 
@@ -178,12 +178,13 @@ const inputLineItems = computed(() =>
 )
 
 // Measured top offsets for each logical line (for soft-wrap gutter).
-const inputLinePositions = ref([])
-const mirror = ref(null)
-const mirrorWidth = ref('100%')
-const mirrorHeight = ref('auto')
+type LinePos = { n: number; top: number }
+const inputLinePositions = ref<LinePos[]>([])
+const mirror = ref<HTMLDivElement | null>(null)
+const mirrorWidth = ref<string>('100%')
+const mirrorHeight = ref<string>('auto')
 
-async function measureLines() {
+async function measureLines(): Promise<void> {
   await nextTick()
   if (!mirror.value || !inputArea.value) return
   // Match mirror width to textarea's inner content width
@@ -199,7 +200,7 @@ async function measureLines() {
     parseFloat(cs.paddingRight) +
     'px'
   await nextTick()
-  const nodes = mirror.value.querySelectorAll('[data-ln]')
+  const nodes = mirror.value.querySelectorAll<HTMLElement>('[data-ln]')
   const base = mirror.value.getBoundingClientRect().top
   inputLinePositions.value = Array.from(nodes).map((el) => ({
     n: Number(el.dataset.ln),
@@ -234,24 +235,24 @@ const languages = [
   { id: 'js', label: 'JavaScript' },
 ]
 
-const inputArea = ref(null)
-const inputGutter = ref(null)
-function onInputScroll() {
+const inputArea = ref<HTMLTextAreaElement | null>(null)
+const inputGutter = ref<HTMLDivElement | null>(null)
+function onInputScroll(): void {
   if (inputGutter.value && inputArea.value) {
     inputGutter.value.scrollTop = inputArea.value.scrollTop
   }
 }
 
 const copied = ref(false)
-let copyTimer = null
-function copyOutput() {
+let copyTimer: ReturnType<typeof setTimeout> | null = null
+function copyOutput(): void {
   if (!output.value) return
   navigator.clipboard.writeText(output.value)
   copied.value = true
-  clearTimeout(copyTimer)
+  if (copyTimer) clearTimeout(copyTimer)
   copyTimer = setTimeout(() => (copied.value = false), 1500)
 }
-function clearAll() {
+function clearAll(): void {
   input.value = ''
 }
 </script>
