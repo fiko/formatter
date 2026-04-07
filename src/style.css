@@ -9,3 +9,21 @@ body {
   @apply font-sans antialiased text-slate-800;
   background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
 }
+
+/* Output line rendering — guarantee gutter + code alignment */
+.output-line {
+  display: block;
+  line-height: 1.6;
+  white-space: pre;
+}
+.output-ln {
+  display: inline-block;
+  width: 3rem;
+  padding-right: 0.75rem;
+  text-align: right;
+  color: rgb(148 163 184 / 0.7);
+  user-select: none;
+}
+.output-code {
+  white-space: pre;
+}

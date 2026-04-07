@@ -131,7 +131,7 @@ const outputHighlighted = computed(() => {
     .split('\n')
     .map(
       (line, i) =>
-        `<div class="flex"><span class="select-none w-10 pr-3 text-right text-slate-400">${i + 1}</span><span class="flex-1">${line || ' '}</span></div>`
+        `<span class="output-line"><span class="output-ln">${i + 1}</span><span class="output-code">${line || ' '}</span></span>`
     )
     .join('')
 })
