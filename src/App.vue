@@ -60,23 +60,37 @@ onMounted(() => {
 
 // Parse URL path → { mode, language }
 // Supported: /, /json, /xml, /javascript, /minify, /minify/json, /minify/xml, /minify/javascript
+const SLUG_MAP = { json: 'json', xml: 'xml', javascript: 'js', js: 'js' }
+const KNOWN_LANGS = new Set(Object.keys(SLUG_MAP))
+
 function parsePath(pathname) {
   const parts = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean)
+  if (parts.length === 0) return { mode: 'beautify', language: 'json', notFound: false }
+
   let m = 'beautify'
   let langSlug = 'json'
-  if (parts[0] === 'minify') {
-    m = 'minify'
-    if (parts[1]) langSlug = parts[1]
-  } else if (parts[0] === 'beautify') {
-    if (parts[1]) langSlug = parts[1]
-  } else if (parts[0]) {
-    langSlug = parts[0]
+  let rest = parts
+
+  if (parts[0] === 'minify' || parts[0] === 'beautify') {
+    m = parts[0]
+    rest = parts.slice(1)
+    if (rest.length === 0) {
+      return { mode: m, language: 'json', notFound: false }
+    }
   }
-  const slugMap = { json: 'json', xml: 'xml', javascript: 'js', js: 'js' }
-  return { mode: m, language: slugMap[langSlug] || 'json' }
+
+  if (rest.length !== 1 || !KNOWN_LANGS.has(rest[0])) {
+    return { mode: 'beautify', language: 'json', notFound: true }
+  }
+  langSlug = rest[0]
+  return { mode: m, language: SLUG_MAP[langSlug], notFound: false }
 }
 
-const initial = typeof window !== 'undefined' ? parsePath(window.location.pathname) : { mode: 'beautify', language: 'json' }
+const initial =
+  typeof window !== 'undefined'
+    ? parsePath(window.location.pathname)
+    : { mode: 'beautify', language: 'json', notFound: false }
+const notFound = ref(initial.notFound)
 
 const language = ref(initial.language)
 const mode = ref(initial.mode)
@@ -84,7 +98,7 @@ const indent = ref('2')
 
 // Keep URL in sync when user changes language/mode
 function syncUrl() {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined' || notFound.value) return
   const langSlug = language.value === 'js' ? 'javascript' : language.value
   const path =
     mode.value === 'minify' ? `/minify/${langSlug}` : `/${langSlug}`
@@ -93,6 +107,13 @@ function syncUrl() {
   }
 }
 watch([language, mode], syncUrl)
+
+function goHome() {
+  notFound.value = false
+  language.value = 'json'
+  mode.value = 'beautify'
+  window.history.replaceState(null, '', '/')
+}
 const input = ref('')
 const SAMPLES = {
   json: `{"Name":"John Doe","Sample":"Paste your JSON, XML or JavaScript here..."}`,
@@ -236,7 +257,40 @@ function clearAll() {
 </script>
 
 <template>
-  <div class="h-screen w-screen flex overflow-hidden relative">
+  <!-- 404 page -->
+  <div
+    v-if="notFound"
+    class="h-screen w-screen flex flex-col items-center justify-center text-center px-6 bg-gradient-to-br from-indigo-200 to-indigo-400 dark:from-brand-dark dark:to-indigo-950 text-brand-dark dark:text-indigo-100"
+  >
+    <div class="font-mono text-[8rem] leading-none font-bold text-indigo-600 dark:text-indigo-400 drop-shadow-sm">
+      404
+    </div>
+    <h1 class="mt-4 text-2xl md:text-3xl font-bold">Page not found</h1>
+    <p class="mt-2 max-w-md text-sm md:text-base text-indigo-900/70 dark:text-indigo-200/70">
+      The URL you're looking for doesn't exist. Try one of the valid formatter routes below.
+    </p>
+    <div class="mt-6 font-mono text-xs md:text-sm flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-indigo-900/80 dark:text-indigo-200/80">
+      <a href="/" class="underline hover:text-indigo-600 dark:hover:text-white transition">/json</a>
+      <span>·</span>
+      <a href="/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/xml</a>
+      <span>·</span>
+      <a href="/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/javascript</a>
+      <span class="mx-1">|</span>
+      <a href="/minify" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify</a>
+      <span>·</span>
+      <a href="/minify/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/xml</a>
+      <span>·</span>
+      <a href="/minify/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/javascript</a>
+    </div>
+    <button
+      @click="goHome"
+      class="mt-8 px-6 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shadow-lg transition"
+    >
+      Back to Formatter
+    </button>
+  </div>
+
+  <div v-else class="h-screen w-screen flex overflow-hidden relative">
     <!-- INPUT PANE -->
     <section
       class="relative flex flex-col bg-indigo-200 text-indigo-900 dark:bg-brand-dark dark:text-indigo-100 w-full h-full"
