@@ -165,7 +165,7 @@ function clearAll() {
       >
         <div
           ref="inputGutter"
-          class="w-12 shrink-0 overflow-hidden bg-indigo-300/40 dark:bg-black/20 text-right font-mono text-xs leading-relaxed text-indigo-600/70 dark:text-indigo-400/50 select-none py-5"
+          class="w-12 shrink-0 overflow-hidden bg-indigo-300/40 dark:bg-black/20 text-right font-mono text-xs leading-relaxed text-indigo-600/70 dark:text-indigo-400/50 select-none pt-5 pb-32"
         >
           <div
             v-for="n in inputLines"
