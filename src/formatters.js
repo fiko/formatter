@@ -1,8 +1,14 @@
 // Lightweight formatters for JSON, XML and JavaScript.
 
-export function beautifyJSON(input) {
+function resolveIndent(indent) {
+  if (indent === 'tab' || indent === '\t') return '\t'
+  const n = Number(indent)
+  return ' '.repeat(Number.isFinite(n) && n > 0 ? n : 2)
+}
+
+export function beautifyJSON(input, indent = 2) {
   const obj = JSON.parse(input)
-  return JSON.stringify(obj, null, 2)
+  return JSON.stringify(obj, null, resolveIndent(indent))
 }
 
 export function minifyJSON(input) {
@@ -18,9 +24,9 @@ export function minifyXML(input) {
     .trim()
 }
 
-export function beautifyXML(input) {
+export function beautifyXML(input, indent = 2) {
   const xml = minifyXML(input)
-  const PADDING = '  '
+  const PADDING = resolveIndent(indent)
   let formatted = ''
   let pad = 0
   xml
@@ -28,20 +34,18 @@ export function beautifyXML(input) {
     .split('\n')
     .forEach((node) => {
       if (!node.trim()) return
-      let indent = 0
+      let add = 0
       if (node.match(/^<\/\w/)) {
         pad = Math.max(pad - 1, 0)
       } else if (node.match(/^<\w[^>]*[^\/]>.*$/) && !node.match(/<\/\w/)) {
-        indent = 1
+        add = 1
       }
       formatted += PADDING.repeat(pad) + node + '\n'
-      pad += indent
+      pad += add
     })
   return formatted.trim()
 }
 
-// Very small JS minifier — strips comments and collapses whitespace.
-// Not a full parser; good enough for snippets.
 export function minifyJS(input) {
   return input
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -51,12 +55,12 @@ export function minifyJS(input) {
     .trim()
 }
 
-// Tiny JS beautifier based on brace/semicolon structure.
-export function beautifyJS(input) {
+export function beautifyJS(input, indent = 2) {
   const src = minifyJS(input)
+  const PAD = resolveIndent(indent)
   let out = ''
-  let indent = 0
-  const pad = () => '  '.repeat(indent)
+  let depth = 0
+  const pad = () => PAD.repeat(depth)
   let inString = false
   let stringCh = ''
   for (let i = 0; i < src.length; i++) {
@@ -73,10 +77,10 @@ export function beautifyJS(input) {
       continue
     }
     if (ch === '{') {
-      indent++
+      depth++
       out += '{\n' + pad()
     } else if (ch === '}') {
-      indent = Math.max(indent - 1, 0)
+      depth = Math.max(depth - 1, 0)
       out = out.replace(/\s+$/, '')
       out += '\n' + pad() + '}'
     } else if (ch === ';') {
@@ -88,10 +92,13 @@ export function beautifyJS(input) {
   return out.replace(/\n\s*\n/g, '\n').trim()
 }
 
-export function format(language, mode, input) {
+export function format(language, mode, input, indent = 2) {
   if (!input.trim()) return ''
-  if (language === 'json') return mode === 'minify' ? minifyJSON(input) : beautifyJSON(input)
-  if (language === 'xml') return mode === 'minify' ? minifyXML(input) : beautifyXML(input)
-  if (language === 'js') return mode === 'minify' ? minifyJS(input) : beautifyJS(input)
+  if (language === 'json')
+    return mode === 'minify' ? minifyJSON(input) : beautifyJSON(input, indent)
+  if (language === 'xml')
+    return mode === 'minify' ? minifyXML(input) : beautifyXML(input, indent)
+  if (language === 'js')
+    return mode === 'minify' ? minifyJS(input) : beautifyJS(input, indent)
   return input
 }

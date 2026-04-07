@@ -60,6 +60,7 @@ onMounted(() => {
 
 const language = ref('json')
 const mode = ref('beautify')
+const indent = ref('2')
 const input = ref('')
 const SAMPLES = {
   json: `{"Name":"John Doe","Sample":"Paste your JSON, XML or JavaScript here..."}`,
@@ -108,7 +109,7 @@ function startResize(e) {
 const output = computed(() => {
   try {
     error.value = ''
-    return format(language.value, mode.value, input.value)
+    return format(language.value, mode.value, input.value, indent.value)
   } catch (e) {
     error.value = e.message
     return ''
@@ -293,14 +294,29 @@ function clearAll() {
           <h2 class="text-lg font-bold text-brand-dark dark:text-white tracking-tight">Output</h2>
           <p class="text-xs text-slate-500 dark:text-slate-400 capitalize">{{ language }} · {{ mode }}</p>
         </div>
-        <button
-          @click="copyOutput"
-          :disabled="!output"
-          class="text-xs px-3 py-1.5 rounded-md text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
-          :class="copied ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
-        >
-          {{ copied ? 'Copied!' : 'Copy' }}
-        </button>
+        <div class="flex items-center gap-2">
+          <label
+            v-if="mode === 'beautify'"
+            class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300"
+          >
+            <select
+              v-model="indent"
+              class="text-xs rounded-md px-2 py-1 bg-white dark:bg-white/10 border border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="2">2 tab space</option>
+              <option value="4">4 tab space</option>
+              <option value="8">8 tab space</option>
+            </select>
+          </label>
+          <button
+            @click="copyOutput"
+            :disabled="!output"
+            class="text-xs px-3 py-1.5 rounded-md text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+            :class="copied ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+          >
+            {{ copied ? 'Copied!' : 'Copy' }}
+          </button>
+        </div>
       </header>
 
       <div class="flex-1 overflow-auto relative">
