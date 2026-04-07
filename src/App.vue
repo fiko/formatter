@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { format } from './formatters.js'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
@@ -31,6 +31,25 @@ function applyTheme(t) {
 function toggleTheme() {
   applyTheme(theme.value === 'dark' ? 'light' : 'dark')
 }
+// Mobile detection
+const isMobile = ref(false)
+let mqlTheme = null
+onMounted(() => {
+  mqlTheme = window.matchMedia('(max-width: 767px)')
+  isMobile.value = mqlTheme.matches
+  mqlTheme.addEventListener('change', (e) => (isMobile.value = e.matches))
+})
+onUnmounted(() => {
+  if (mqlTheme) mqlTheme.onchange = null
+})
+
+const outputStyle = computed(() =>
+  isMobile.value ? {} : { left: outputLeftPct.value + '%' }
+)
+const editorStyle = computed(() =>
+  isMobile.value ? {} : { width: outputLeftPct.value + 'vw' }
+)
+
 onMounted(() => {
   const stored = localStorage.getItem('theme')
   const prefersDark =
@@ -141,7 +160,7 @@ function clearAll() {
   <div class="h-screen w-screen flex overflow-hidden relative">
     <!-- INPUT PANE -->
     <section
-      class="relative flex flex-col bg-indigo-200 text-indigo-900 dark:bg-brand-dark dark:text-indigo-100 w-full"
+      class="relative flex flex-col bg-indigo-200 text-indigo-900 dark:bg-brand-dark dark:text-indigo-100 w-full h-full"
     >
       <!-- Sticky header -->
       <header class="sticky top-0 z-20 px-6 py-4 bg-indigo-200/95 dark:bg-brand-dark/95 backdrop-blur border-b border-indigo-300/50 dark:border-white/10 flex items-center justify-between">
@@ -159,9 +178,9 @@ function clearAll() {
 
       <!-- Editor area: gutter + textarea -->
       <div
-        class="flex-1 flex overflow-hidden relative"
+        class="flex-1 flex overflow-hidden relative w-full"
         :class="isResizing ? '' : 'transition-[width] duration-500 ease-in-out'"
-        :style="{ width: outputLeftPct + 'vw' }"
+        :style="editorStyle"
       >
         <div
           ref="inputGutter"
@@ -186,7 +205,10 @@ function clearAll() {
       </div>
 
       <!-- Sticky footer with gradient -->
-      <footer class="absolute bottom-0 left-0 right-0 z-10 pl-20 pr-6 pt-12 pb-5 bg-gradient-to-t from-indigo-200 via-indigo-200/95 to-transparent dark:from-brand-dark dark:via-brand-dark/95 dark:to-transparent pointer-events-none">
+      <footer
+        class="absolute bottom-0 left-0 z-40 pl-20 pr-6 pt-12 pb-5 md:bg-gradient-to-t md:from-indigo-200 md:via-indigo-200/95 md:to-transparent md:dark:from-brand-dark md:dark:via-brand-dark/95 md:dark:to-transparent pointer-events-none"
+        :style="editorStyle"
+      >
         <div class="flex flex-wrap items-center gap-2 pointer-events-auto">
           <div class="inline-flex rounded-lg bg-white/60 dark:bg-white/10 backdrop-blur p-1">
             <button
@@ -227,15 +249,15 @@ function clearAll() {
 
     <!-- OUTPUT PANE — floats over input with rounded corners -->
     <section
-      class="absolute top-4 bottom-4 right-4 z-30 flex flex-col bg-white dark:bg-[#282c34] rounded-3xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden"
+      class="absolute z-30 flex flex-col bg-white dark:bg-[#282c34] rounded-3xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden top-[55%] left-2 right-2 bottom-2 md:top-4 md:bottom-4 md:right-4 md:left-auto"
       :class="isResizing ? '' : 'transition-[left] duration-500 ease-in-out'"
-      :style="{ left: outputLeftPct + '%' }"
+      :style="outputStyle"
     >
       <!-- Drag handle to resize -->
       <div
         @mousedown="startResize"
         @touchstart="startResize"
-        class="absolute top-0 left-0 h-full w-2 cursor-col-resize z-20 group"
+        class="hidden md:block absolute top-0 left-0 h-full w-2 cursor-col-resize z-20 group"
       >
         <div class="absolute top-1/2 -translate-y-1/2 left-0 w-1 h-12 rounded-full bg-slate-300 dark:bg-white/20 group-hover:bg-indigo-500 transition" />
       </div>
