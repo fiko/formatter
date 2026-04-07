@@ -1,15 +1,43 @@
 <script setup>
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { format } from './formatters.js'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
 import xml from 'highlight.js/lib/languages/xml'
 import javascript from 'highlight.js/lib/languages/javascript'
-import 'highlight.js/styles/atom-one-dark.css'
+import lightTheme from 'highlight.js/styles/atom-one-light.css?raw'
+import darkTheme from 'highlight.js/styles/atom-one-dark.css?raw'
 
 hljs.registerLanguage('json', json)
 hljs.registerLanguage('xml', xml)
 hljs.registerLanguage('javascript', javascript)
+
+// Theme handling — initial value matches localStorage > system preference
+const theme = ref('light')
+function applyTheme(t) {
+  theme.value = t
+  const root = document.documentElement
+  if (t === 'dark') root.classList.add('dark')
+  else root.classList.remove('dark')
+  let styleEl = document.getElementById('hljs-theme')
+  if (!styleEl) {
+    styleEl = document.createElement('style')
+    styleEl.id = 'hljs-theme'
+    document.head.appendChild(styleEl)
+  }
+  styleEl.textContent = t === 'dark' ? darkTheme : lightTheme
+  localStorage.setItem('theme', t)
+}
+function toggleTheme() {
+  applyTheme(theme.value === 'dark' ? 'light' : 'dark')
+}
+onMounted(() => {
+  const stored = localStorage.getItem('theme')
+  const prefersDark =
+    window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  applyTheme(stored || (prefersDark ? 'dark' : 'light'))
+})
 
 const language = ref('json')
 const mode = ref('beautify')
@@ -44,9 +72,7 @@ const outputHighlighted = computed(() => {
     .split('\n')
     .map(
       (line, i) =>
-        `<div class="flex"><span class="select-none w-10 pr-3 text-right text-slate-400/60">${
-          i + 1
-        }</span><span class="flex-1">${line || ' '}</span></div>`
+        `<div class="flex"><span class="select-none w-10 pr-3 text-right text-slate-400">${i + 1}</span><span class="flex-1">${line || ' '}</span></div>`
     )
     .join('')
 })
@@ -65,8 +91,14 @@ function onInputScroll() {
   }
 }
 
+const copied = ref(false)
+let copyTimer = null
 function copyOutput() {
-  if (output.value) navigator.clipboard.writeText(output.value)
+  if (!output.value) return
+  navigator.clipboard.writeText(output.value)
+  copied.value = true
+  clearTimeout(copyTimer)
+  copyTimer = setTimeout(() => (copied.value = false), 1500)
 }
 function clearAll() {
   input.value = ''
@@ -74,21 +106,20 @@ function clearAll() {
 </script>
 
 <template>
-  <div class="h-screen w-screen flex overflow-hidden">
+  <div class="h-screen w-screen flex overflow-hidden relative">
     <!-- INPUT PANE -->
     <section
-      class="relative flex flex-col bg-brand-dark text-indigo-100 transition-all duration-500 ease-in-out"
-      :class="hasInput ? 'w-1/3' : 'w-1/2'"
+      class="relative flex flex-col bg-indigo-200 text-indigo-900 dark:bg-brand-dark dark:text-indigo-100 w-full"
     >
       <!-- Sticky header -->
-      <header class="sticky top-0 z-20 px-6 py-4 bg-brand-dark/95 backdrop-blur border-b border-white/10 flex items-center justify-between">
+      <header class="sticky top-0 z-20 px-6 py-4 bg-indigo-200/95 dark:bg-brand-dark/95 backdrop-blur border-b border-indigo-300/50 dark:border-white/10 flex items-center justify-between">
         <div>
-          <h1 class="text-lg font-bold tracking-tight">Code Formatter <span class="text-indigo-400 font-normal">(by Fiko)</span></h1>
-          <p class="text-xs text-indigo-300/70">JSON · XML · JavaScript</p>
+          <h1 class="text-lg font-bold tracking-tight">Code Formatter <span class="text-indigo-500 dark:text-indigo-400 font-normal">(by Fiko)</span></h1>
+          <p class="text-xs text-indigo-700/70 dark:text-indigo-300/70">JSON · XML · JavaScript</p>
         </div>
         <button
           @click="clearAll"
-          class="text-xs text-indigo-300 hover:text-white transition"
+          class="text-xs text-indigo-700 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-white transition"
         >
           Clear
         </button>
@@ -98,7 +129,7 @@ function clearAll() {
       <div class="flex-1 flex overflow-hidden relative">
         <div
           ref="inputGutter"
-          class="w-12 shrink-0 overflow-hidden bg-black/20 text-right font-mono text-xs leading-relaxed text-indigo-400/50 select-none py-5"
+          class="w-12 shrink-0 overflow-hidden bg-indigo-300/40 dark:bg-black/20 text-right font-mono text-xs leading-relaxed text-indigo-600/70 dark:text-indigo-400/50 select-none py-5"
         >
           <div
             v-for="n in inputLines"
@@ -113,15 +144,15 @@ function clearAll() {
           v-model="input"
           @scroll="onInputScroll"
           spellcheck="false"
-          class="flex-1 bg-transparent pl-3 pr-6 py-5 pb-32 font-mono text-xs leading-relaxed resize-none focus:outline-none placeholder-indigo-400/40 overflow-auto"
+          class="flex-1 bg-transparent pl-3 pr-6 py-5 pb-32 font-mono text-xs leading-relaxed resize-none focus:outline-none placeholder-indigo-500/50 dark:placeholder-indigo-400/40 overflow-auto"
           placeholder="Paste your JSON, XML or JavaScript here…"
         ></textarea>
       </div>
 
       <!-- Sticky footer with gradient -->
-      <footer class="absolute bottom-0 left-0 right-0 z-10 px-6 pt-12 pb-5 bg-gradient-to-t from-brand-dark via-brand-dark/95 to-transparent pointer-events-none">
+      <footer class="absolute bottom-0 left-0 right-0 z-10 pl-20 pr-6 pt-12 pb-5 bg-gradient-to-t from-indigo-200 via-indigo-200/95 to-transparent dark:from-brand-dark dark:via-brand-dark/95 dark:to-transparent pointer-events-none">
         <div class="flex flex-wrap items-center gap-2 pointer-events-auto">
-          <div class="inline-flex rounded-lg bg-white/10 backdrop-blur p-1">
+          <div class="inline-flex rounded-lg bg-white/60 dark:bg-white/10 backdrop-blur p-1">
             <button
               v-for="l in languages"
               :key="l.id"
@@ -129,18 +160,18 @@ function clearAll() {
               class="px-3 py-1 text-xs font-medium rounded-md transition"
               :class="language === l.id
                 ? 'bg-indigo-500 text-white shadow'
-                : 'text-indigo-200 hover:text-white'"
+                : 'text-indigo-700 hover:text-indigo-900 dark:text-indigo-200 dark:hover:text-white'"
             >
               {{ l.label }}
             </button>
           </div>
-          <div class="inline-flex rounded-lg bg-white/10 backdrop-blur p-1">
+          <div class="inline-flex rounded-lg bg-white/60 dark:bg-white/10 backdrop-blur p-1">
             <button
               @click="mode = 'beautify'"
               class="px-3 py-1 text-xs font-medium rounded-md transition"
               :class="mode === 'beautify'
                 ? 'bg-indigo-500 text-white shadow'
-                : 'text-indigo-200 hover:text-white'"
+                : 'text-indigo-700 hover:text-indigo-900 dark:text-indigo-200 dark:hover:text-white'"
             >
               Beautify
             </button>
@@ -149,7 +180,7 @@ function clearAll() {
               class="px-3 py-1 text-xs font-medium rounded-md transition"
               :class="mode === 'minify'
                 ? 'bg-indigo-500 text-white shadow'
-                : 'text-indigo-200 hover:text-white'"
+                : 'text-indigo-700 hover:text-indigo-900 dark:text-indigo-200 dark:hover:text-white'"
             >
               Minify
             </button>
@@ -158,22 +189,23 @@ function clearAll() {
       </footer>
     </section>
 
-    <!-- OUTPUT PANE -->
+    <!-- OUTPUT PANE — floats over input with rounded corners -->
     <section
-      class="relative flex flex-col bg-[#282c34] transition-all duration-500 ease-in-out"
-      :class="hasInput ? 'w-2/3' : 'w-1/2'"
+      class="absolute top-4 bottom-4 right-4 z-30 flex flex-col bg-white dark:bg-[#282c34] rounded-3xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden transition-all duration-500 ease-in-out"
+      :class="hasInput ? 'left-[34%]' : 'left-1/2'"
     >
-      <header class="sticky top-0 z-10 px-6 py-4 bg-[#282c34]/95 backdrop-blur border-b border-white/10 flex items-center justify-between">
+      <header class="sticky top-0 z-10 px-6 py-4 bg-white/95 dark:bg-[#282c34]/95 backdrop-blur border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
         <div>
-          <h2 class="text-lg font-bold text-white tracking-tight">Output</h2>
-          <p class="text-xs text-slate-400 capitalize">{{ language }} · {{ mode }}</p>
+          <h2 class="text-lg font-bold text-brand-dark dark:text-white tracking-tight">Output</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 capitalize">{{ language }} · {{ mode }}</p>
         </div>
         <button
           @click="copyOutput"
           :disabled="!output"
-          class="text-xs px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          class="text-xs px-3 py-1.5 rounded-md text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+          :class="copied ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
         >
-          Copy
+          {{ copied ? 'Copied!' : 'Copy' }}
         </button>
       </header>
 
@@ -197,5 +229,15 @@ function clearAll() {
         </div>
       </div>
     </section>
+
+    <!-- Theme toggle (bottom-left) -->
+    <button
+      @click="toggleTheme"
+      class="fixed bottom-4 left-4 z-40 w-10 h-10 rounded-full bg-white/90 dark:bg-white/10 backdrop-blur shadow-lg ring-1 ring-black/5 dark:ring-white/20 flex items-center justify-center text-brand-dark dark:text-yellow-300 hover:scale-105 transition"
+      :title="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+    >
+      <svg v-if="theme === 'dark'" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
   </div>
 </template>
