@@ -58,9 +58,41 @@ onMounted(() => {
   applyTheme(stored || (prefersDark ? 'dark' : 'light'))
 })
 
-const language = ref('json')
-const mode = ref('beautify')
+// Parse URL path → { mode, language }
+// Supported: /, /json, /xml, /javascript, /minify, /minify/json, /minify/xml, /minify/javascript
+function parsePath(pathname) {
+  const parts = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean)
+  let m = 'beautify'
+  let langSlug = 'json'
+  if (parts[0] === 'minify') {
+    m = 'minify'
+    if (parts[1]) langSlug = parts[1]
+  } else if (parts[0] === 'beautify') {
+    if (parts[1]) langSlug = parts[1]
+  } else if (parts[0]) {
+    langSlug = parts[0]
+  }
+  const slugMap = { json: 'json', xml: 'xml', javascript: 'js', js: 'js' }
+  return { mode: m, language: slugMap[langSlug] || 'json' }
+}
+
+const initial = typeof window !== 'undefined' ? parsePath(window.location.pathname) : { mode: 'beautify', language: 'json' }
+
+const language = ref(initial.language)
+const mode = ref(initial.mode)
 const indent = ref('2')
+
+// Keep URL in sync when user changes language/mode
+function syncUrl() {
+  if (typeof window === 'undefined') return
+  const langSlug = language.value === 'js' ? 'javascript' : language.value
+  const path =
+    mode.value === 'minify' ? `/minify/${langSlug}` : `/${langSlug}`
+  if (window.location.pathname !== path) {
+    window.history.replaceState(null, '', path)
+  }
+}
+watch([language, mode], syncUrl)
 const input = ref('')
 const SAMPLES = {
   json: `{"Name":"John Doe","Sample":"Paste your JSON, XML or JavaScript here..."}`,
