@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { format } from './formatters.js'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
@@ -120,9 +120,47 @@ const hljsLang = computed(() =>
   language.value === 'js' ? 'javascript' : language.value
 )
 
-const inputLines = computed(() => {
-  const n = input.value.split('\n').length || 1
-  return Array.from({ length: n }, (_, i) => i + 1)
+const inputLineItems = computed(() =>
+  (input.value.length ? input.value : ' ').split('\n')
+)
+
+// Measured top offsets for each logical line (for soft-wrap gutter).
+const inputLinePositions = ref([])
+const mirror = ref(null)
+const mirrorWidth = ref('100%')
+const mirrorHeight = ref('auto')
+
+async function measureLines() {
+  await nextTick()
+  if (!mirror.value || !inputArea.value) return
+  // Match mirror width to textarea's inner content width
+  const ta = inputArea.value
+  const cs = getComputedStyle(ta)
+  const innerW =
+    ta.clientWidth -
+    parseFloat(cs.paddingLeft) -
+    parseFloat(cs.paddingRight)
+  mirrorWidth.value =
+    innerW +
+    parseFloat(cs.paddingLeft) +
+    parseFloat(cs.paddingRight) +
+    'px'
+  await nextTick()
+  const nodes = mirror.value.querySelectorAll('[data-ln]')
+  const base = mirror.value.getBoundingClientRect().top
+  inputLinePositions.value = Array.from(nodes).map((el) => ({
+    n: Number(el.dataset.ln),
+    top: el.getBoundingClientRect().top - base,
+  }))
+  mirrorHeight.value = mirror.value.scrollHeight + 'px'
+}
+watch(input, measureLines, { flush: 'post' })
+onMounted(() => {
+  measureLines()
+  if (typeof ResizeObserver !== 'undefined' && inputArea.value) {
+    const ro = new ResizeObserver(() => measureLines())
+    ro.observe(inputArea.value)
+  }
 })
 
 const outputHighlighted = computed(() => {
@@ -205,14 +243,17 @@ function clearAll() {
       >
         <div
           ref="inputGutter"
-          class="w-12 shrink-0 overflow-hidden bg-indigo-300/40 dark:bg-black/20 text-right font-mono text-xs leading-relaxed text-indigo-600/70 dark:text-indigo-400/50 select-none pt-5 pb-32"
+          class="w-12 shrink-0 overflow-hidden bg-indigo-300/40 dark:bg-black/20 text-right font-mono text-xs leading-relaxed text-indigo-600/70 dark:text-indigo-400/50 select-none relative"
         >
-          <div
-            v-for="n in inputLines"
-            :key="n"
-            class="px-2"
-          >
-            {{ n }}
+          <div class="relative pt-5 pb-32" :style="{ height: mirrorHeight }">
+            <div
+              v-for="item in inputLinePositions"
+              :key="item.n"
+              class="absolute left-0 right-0 px-2"
+              :style="{ top: item.top + 'px' }"
+            >
+              {{ item.n }}
+            </div>
           </div>
         </div>
         <button
@@ -230,6 +271,16 @@ function clearAll() {
           class="flex-1 bg-transparent pl-3 pr-6 py-5 pb-32 font-mono text-xs leading-relaxed resize-none focus:outline-none placeholder-indigo-500/50 dark:placeholder-indigo-400/40 overflow-auto"
           placeholder="Paste your JSON, XML or JavaScript here…"
         ></textarea>
+
+        <!-- Hidden mirror used to measure where each logical line lives -->
+        <div
+          ref="mirror"
+          aria-hidden="true"
+          class="absolute top-0 left-12 pointer-events-none invisible font-mono text-xs leading-relaxed pl-3 pr-6 py-5 pb-32"
+          :style="{ width: mirrorWidth, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }"
+        >
+          <div v-for="(line, i) in inputLineItems" :key="i" :data-ln="i + 1">{{ line || ' ' }}</div>
+        </div>
       </div>
 
       <!-- Sticky footer with gradient -->
