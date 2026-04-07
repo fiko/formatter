@@ -86,7 +86,7 @@ function parsePath(pathname: string): ParsedPath {
   return { mode: m, language: SLUG_TO_LANG[rest[0]], notFound: false }
 }
 
-const initial =
+const initial: ParsedPath =
   typeof window !== 'undefined'
     ? parsePath(window.location.pathname)
     : { mode: 'beautify', language: 'json', notFound: false }
@@ -164,7 +164,7 @@ const output = computed(() => {
     error.value = ''
     return format(language.value, mode.value, input.value, indent.value)
   } catch (e) {
-    error.value = e.message
+    error.value = e instanceof Error ? e.message : String(e)
     return ''
   }
 })
@@ -229,7 +229,7 @@ const outputHighlighted = computed(() => {
     .join('')
 })
 
-const languages = [
+const languages: { id: Language; label: string }[] = [
   { id: 'json', label: 'JSON' },
   { id: 'xml', label: 'XML' },
   { id: 'js', label: 'JavaScript' },
