@@ -26,7 +26,7 @@ function toggle(): void {
   numberLines?.()
 }
 
-const defaultOpen = props.initialOpen !== null ? props.initialOpen : props.depth < 2
+const defaultOpen = props.initialOpen !== null ? props.initialOpen : true
 const isOpen = ref(defaultOpen)
 
 const type = computed(() => {
@@ -66,10 +66,8 @@ const indentRem = computed(() => {
 
 const indent = computed(() => `${props.depth * indentRem.value}rem`)
 
-// Guide line position for THIS node's children:
-// gutter (3rem) + current depth indent + half-chevron offset
 const myGuideLeft = computed(() =>
-  `calc(3rem + ${props.depth * indentRem.value}rem + 0.5rem)`
+  `calc(3rem + ${props.depth * indentRem.value}rem + 0.3rem)`
 )
 
 // Guides to pass down to children = inherited guides + this node's guide (when open)
@@ -97,7 +95,24 @@ function displayValue(): string {
 <template>
   <!-- Opening / primitive row -->
   <span class="json-line relative">
-    <span class="json-ln"></span>
+    <span class="json-ln">
+      <span class="json-ln-num"></span>
+      <button
+        v-if="isCollapsible"
+        @click="toggle"
+        class="json-ln-toggle"
+        :aria-label="isOpen ? 'Collapse' : 'Expand'"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round"
+          class="transition-transform duration-150"
+          :class="isOpen ? 'rotate-90' : ''"
+        ><path d="M9 18l6-6-6-6" /></svg>
+      </button>
+      <span v-else class="json-ln-toggle" aria-hidden="true" />
+    </span>
     <!-- Inherited guide lines drawn inside this row -->
     <span
       v-for="(g, gi) in guides"
@@ -120,21 +135,7 @@ function displayValue(): string {
 
       <!-- Collapsible header -->
       <template v-else>
-        <button
-          @click="toggle"
-          class="inline-flex items-center gap-0.5 hover:opacity-70 transition select-none focus:outline-none"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round"
-            class="text-slate-400 dark:text-slate-500 shrink-0 transition-transform duration-150"
-            :class="isOpen ? 'rotate-90' : ''"
-          ><path d="M9 18l6-6-6-6" /></svg>
-          <span class="text-slate-500 dark:text-slate-400">{{ bracket.open }}</span>
-        </button>
-
-        <!-- Collapsed pill -->
+        <span class="text-slate-500 dark:text-slate-400">{{ bracket.open }}</span>
         <template v-if="!isOpen">
           <span class="mx-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400">
             {{ summary }}
@@ -161,7 +162,10 @@ function displayValue(): string {
 
     <!-- Closing bracket row -->
     <span class="json-line relative">
-      <span class="json-ln"></span>
+      <span class="json-ln">
+        <span class="json-ln-num"></span>
+        <span class="json-ln-toggle" aria-hidden="true" />
+      </span>
       <span
         v-for="(g, gi) in guides"
         :key="gi"

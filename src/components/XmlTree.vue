@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, onMounted, provide, toRef } from 'vue'
-import JsonNode from './JsonNode.vue'
+import XmlNode from './XmlNode.vue'
 
 interface Props {
   value: string
@@ -8,15 +8,26 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), { indent: 2 })
 
+const xmlDecl = computed(() => {
+  const m = props.value.match(/^\s*(<\?xml\b[^?]*\?>)/)
+  return m ? m[1] : ''
+})
+
 const parsed = computed(() => {
   try {
-    return { data: JSON.parse(props.value), error: null }
+    const doc = new DOMParser().parseFromString(props.value, 'text/xml')
+    const err = doc.querySelector('parsererror')
+    if (err) return { nodes: [] as Node[], error: err.textContent || 'Parse error' }
+    const nodes: Node[] = []
+    doc.childNodes.forEach((n) => {
+      if (n.nodeType === 1 || n.nodeType === 7 || n.nodeType === 8) nodes.push(n)
+    })
+    return { nodes, error: null as string | null }
   } catch (e) {
-    return { data: null, error: e instanceof Error ? e.message : String(e) }
+    return { nodes: [], error: e instanceof Error ? e.message : String(e) }
   }
 })
 
-// null = auto (depth < 2), true = all expanded, false = all collapsed
 const treeKey = ref(0)
 const forcedOpen = ref<boolean | null>(null)
 const softWrap = ref(false)
@@ -32,11 +43,10 @@ async function numberLines(): Promise<void> {
 
 function expandAll(): void { forcedOpen.value = true;  treeKey.value++ }
 function collapseAll(): void { forcedOpen.value = false; treeKey.value++ }
-function resetAuto(): void { forcedOpen.value = null;  treeKey.value++ }
 
 watch(treeKey, numberLines)
 watch(() => treeEl.value, numberLines)
-watch(() => parsed.value.data, numberLines, { deep: true })
+watch(() => props.value, numberLines)
 onMounted(numberLines)
 provide('numberLines', numberLines)
 provide('indent', toRef(props, 'indent'))
@@ -44,7 +54,6 @@ provide('indent', toRef(props, 'indent'))
 
 <template>
   <div class="h-full flex flex-col">
-    <!-- Toolbar -->
     <div class="flex items-center gap-3 px-5 py-2 border-b border-slate-200 dark:border-white/10 text-[11px] text-slate-500 dark:text-slate-400 select-none">
       <button @click="expandAll"  class="hover:text-indigo-600 dark:hover:text-indigo-400 transition">Expand all</button>
       <span class="text-slate-300 dark:text-white/20">|</span>
@@ -63,24 +72,27 @@ provide('indent', toRef(props, 'indent'))
       </button>
     </div>
 
-    <!-- Parse error -->
     <div v-if="parsed.error" class="flex-1 flex items-center justify-center text-xs text-red-500 px-4">
       {{ parsed.error }}
     </div>
 
-    <!-- Tree with line-number gutter -->
     <div v-else class="flex-1 flex overflow-auto">
-      <!-- Gutter background strip -->
       <div class="sticky left-0 w-12 shrink-0 bg-slate-100 dark:bg-[#1e2028] z-10 self-stretch" />
 
-      <!-- Scrollable content, offset left so numbers overlay the gutter -->
       <div ref="treeEl" class="flex-1 font-mono text-xs leading-relaxed py-4 -ml-12" :class="softWrap ? 'break-all' : 'whitespace-nowrap'">
-        <div class="json-tree-content">
-          <JsonNode
-            :key="treeKey"
-            :data="parsed.data"
+        <div class="json-tree-content" :key="treeKey">
+          <span v-if="xmlDecl" class="json-line relative">
+            <span class="json-ln">
+              <span class="json-ln-num"></span>
+              <span class="json-ln-toggle" aria-hidden="true" />
+            </span>
+            <span class="text-purple-600 dark:text-purple-400">{{ xmlDecl }}</span>
+          </span>
+          <XmlNode
+            v-for="(n, i) in parsed.nodes"
+            :key="i"
+            :node="n"
             :depth="0"
-            :isLast="true"
             :initialOpen="forcedOpen"
           />
         </div>
