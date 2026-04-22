@@ -42,15 +42,18 @@ body {
   justify-content: center;
   color: rgb(100 116 139 / 0.85);
   background: transparent;
-  border: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
   padding: 0;
   cursor: pointer;
 }
 button.json-ln-toggle:hover {
   color: rgb(79 70 229);
+  border-color: rgb(79 70 229 / 0.5);
 }
 .dark button.json-ln-toggle:hover {
   color: rgb(129 140 248);
+  border-color: rgb(129 140 248 / 0.5);
 }
 .json-ln-num {
   flex: 1;
