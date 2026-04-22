@@ -26,7 +26,7 @@ function toggle(): void {
   numberLines?.()
 }
 
-const defaultOpen = props.initialOpen !== null ? props.initialOpen : props.depth < 2
+const defaultOpen = props.initialOpen !== null ? props.initialOpen : true
 const isOpen = ref(defaultOpen)
 
 const type = computed(() => {
