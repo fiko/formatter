@@ -18,6 +18,7 @@ const parsed = computed(() => {
 // null = auto (depth < 2), true = all expanded, false = all collapsed
 const treeKey = ref(0)
 const forcedOpen = ref<boolean | null>(null)
+const softWrap = ref(false)
 const treeEl = ref<HTMLDivElement | null>(null)
 
 async function numberLines(): Promise<void> {
@@ -46,7 +47,17 @@ provide('numberLines', numberLines)
       <span class="text-slate-300 dark:text-white/20">|</span>
       <button @click="collapseAll" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition">Collapse all</button>
       <span class="text-slate-300 dark:text-white/20">|</span>
-      <button @click="resetAuto"  class="hover:text-indigo-600 dark:hover:text-indigo-400 transition">Reset</button>
+      <button
+        @click="softWrap = !softWrap"
+        class="flex items-center gap-1 transition"
+        :class="softWrap
+          ? 'text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400'
+          : 'text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400'"
+        title="Toggle soft wrap"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Soft wrap
+      </button>
     </div>
 
     <!-- Parse error -->
@@ -60,7 +71,7 @@ provide('numberLines', numberLines)
       <div class="sticky left-0 w-12 shrink-0 bg-slate-100 dark:bg-[#1e2028] z-10 self-stretch" />
 
       <!-- Scrollable content, offset left so numbers overlay the gutter -->
-      <div ref="treeEl" class="flex-1 font-mono text-xs leading-relaxed py-4 -ml-12">
+      <div ref="treeEl" class="flex-1 font-mono text-xs leading-relaxed py-4 -ml-12" :class="softWrap ? 'break-all' : 'whitespace-nowrap'">
         <div class="json-tree-content">
           <JsonNode
             :key="treeKey"
