@@ -25,7 +25,7 @@ const treeEl = ref<HTMLDivElement | null>(null)
 async function numberLines(): Promise<void> {
   await nextTick()
   if (!treeEl.value) return
-  treeEl.value.querySelectorAll<HTMLElement>('.json-ln').forEach((el, i) => {
+  treeEl.value.querySelectorAll<HTMLElement>('.json-ln-num').forEach((el, i) => {
     el.textContent = String(i + 1)
   })
 }
@@ -36,6 +36,7 @@ function resetAuto(): void { forcedOpen.value = null;  treeKey.value++ }
 
 watch(treeKey, numberLines)
 watch(() => treeEl.value, numberLines)
+watch(() => parsed.value.data, numberLines, { deep: true })
 onMounted(numberLines)
 provide('numberLines', numberLines)
 provide('indent', toRef(props, 'indent'))

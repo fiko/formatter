@@ -16,22 +16,46 @@ body {
   align-items: baseline;
   min-height: 1.6em;
 }
-/* Sticky line number */
+/* Sticky line-number gutter (holds chevron + number) */
 .json-ln {
   position: sticky;
   left: 0;
   flex-shrink: 0;
   width: 3rem;
-  padding-right: 0.75rem;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  padding-right: 0.1rem;
   color: rgb(148 163 184 / 0.6);
   user-select: none;
-  pointer-events: none;
   z-index: 11;
   background-color: rgb(241 245 249);
 }
 .dark .json-ln {
   background-color: rgb(30 32 40);
+}
+.json-ln-toggle {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(100 116 139 / 0.85);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+button.json-ln-toggle:hover {
+  color: rgb(79 70 229);
+}
+.dark button.json-ln-toggle:hover {
+  color: rgb(129 140 248);
+}
+.json-ln-num {
+  flex: 1;
+  text-align: right;
+  pointer-events: none;
 }
 
 /* Output line rendering — guarantee gutter + code alignment */
