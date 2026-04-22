@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, watch, onMounted, provide } from 'vue'
+import { computed, ref, nextTick, watch, onMounted, provide, toRef } from 'vue'
 import JsonNode from './JsonNode.vue'
 
 interface Props {
   value: string
+  indent?: number | string
 }
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { indent: 2 })
 
 const parsed = computed(() => {
   try {
@@ -37,6 +38,7 @@ watch(treeKey, numberLines)
 watch(() => treeEl.value, numberLines)
 onMounted(numberLines)
 provide('numberLines', numberLines)
+provide('indent', toRef(props, 'indent'))
 </script>
 
 <template>

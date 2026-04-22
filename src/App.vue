@@ -463,6 +463,7 @@ function clearAll(): void {
         <JsonTree
           v-if="output && language === 'json' && mode === 'beautify'"
           :value="output"
+          :indent="indent"
           class="flex-1"
         />
 

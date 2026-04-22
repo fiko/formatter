@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, type Ref } from 'vue'
 
 interface Props {
   data: unknown
@@ -19,6 +19,8 @@ const props = withDefaults(defineProps<Props>(), {
 const defaultOpen = props.initialOpen !== null ? props.initialOpen : props.depth < 2
 const isOpen = ref(defaultOpen)
 const numberLines = inject<() => Promise<void>>('numberLines')
+const indentProp = inject<Ref<number | string>>('indent')
+
 function toggle(): void {
   isOpen.value = !isOpen.value
   numberLines?.()
@@ -53,10 +55,14 @@ const bracket = computed(() => ({
   close: type.value === 'array' ? ']' : '}',
 }))
 
-// Indentation in rem per depth level
-const INDENT = 1.25
-const indent = computed(() => `${props.depth * INDENT}rem`)
-const closeIndent = computed(() => `${props.depth * INDENT}rem`)
+// Indentation in rem per depth level — driven by the indent prop from JsonTree
+const indentRem = computed(() => {
+  const raw = indentProp?.value ?? 2
+  const spaces = raw === 'tab' ? 4 : Math.max(1, Number(raw))
+  return spaces * 0.55 // ~0.55rem per space feels right at text-xs
+})
+const indent = computed(() => `${props.depth * indentRem.value}rem`)
+const closeIndent = computed(() => `${props.depth * indentRem.value}rem`)
 
 function valueClass(t: string): string {
   switch (t) {
