@@ -7,6 +7,7 @@ interface Props {
   depth?: number
   isLast?: boolean
   initialOpen?: boolean | null
+  guides?: string[]  // inherited left-positions (CSS) of ancestor guide lines
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -14,10 +15,9 @@ const props = withDefaults(defineProps<Props>(), {
   depth: 0,
   isLast: true,
   initialOpen: null,
+  guides: () => [],
 })
 
-const defaultOpen = props.initialOpen !== null ? props.initialOpen : props.depth < 2
-const isOpen = ref(defaultOpen)
 const numberLines = inject<() => Promise<void>>('numberLines')
 const indentProp = inject<Ref<number | string>>('indent')
 
@@ -25,6 +25,9 @@ function toggle(): void {
   isOpen.value = !isOpen.value
   numberLines?.()
 }
+
+const defaultOpen = props.initialOpen !== null ? props.initialOpen : props.depth < 2
+const isOpen = ref(defaultOpen)
 
 const type = computed(() => {
   if (props.data === null) return 'null'
@@ -55,14 +58,24 @@ const bracket = computed(() => ({
   close: type.value === 'array' ? ']' : '}',
 }))
 
-// Indentation in rem per depth level — driven by the indent prop from JsonTree
 const indentRem = computed(() => {
   const raw = indentProp?.value ?? 2
   const spaces = raw === 'tab' ? 4 : Math.max(1, Number(raw))
-  return spaces * 0.55 // ~0.55rem per space feels right at text-xs
+  return spaces * 0.55
 })
+
 const indent = computed(() => `${props.depth * indentRem.value}rem`)
-const closeIndent = computed(() => `${props.depth * indentRem.value}rem`)
+
+// Guide line position for THIS node's children:
+// gutter (3rem) + current depth indent + half-chevron offset
+const myGuideLeft = computed(() =>
+  `calc(3rem + ${props.depth * indentRem.value}rem + 0.5rem)`
+)
+
+// Guides to pass down to children = inherited guides + this node's guide (when open)
+const childGuides = computed(() =>
+  isOpen.value ? [...props.guides, myGuideLeft.value] : props.guides
+)
 
 function valueClass(t: string): string {
   switch (t) {
@@ -83,50 +96,57 @@ function displayValue(): string {
 
 <template>
   <!-- Opening / primitive row -->
-  <span class="json-line">
+  <span class="json-line relative">
     <span class="json-ln"></span>
+    <!-- Inherited guide lines drawn inside this row -->
+    <span
+      v-for="(g, gi) in guides"
+      :key="gi"
+      class="absolute top-0 bottom-0 w-px bg-slate-200 dark:bg-white/10 pointer-events-none"
+      :style="{ left: g }"
+    />
     <span :style="{ paddingLeft: indent }">
-    <!-- Key label -->
-    <span v-if="keyName !== null">
-      <span class="text-indigo-600 dark:text-indigo-400">"{{ keyName }}"</span>
-      <span class="text-slate-400 dark:text-slate-500">: </span>
-    </span>
+      <!-- Key label -->
+      <span v-if="keyName !== null">
+        <span class="text-indigo-600 dark:text-indigo-400">"{{ keyName }}"</span>
+        <span class="text-slate-400 dark:text-slate-500">: </span>
+      </span>
 
-    <!-- Primitive -->
-    <template v-if="!isCollapsible">
-      <span :class="valueClass(type)">{{ displayValue() }}</span>
-      <span v-if="!isLast" class="text-slate-400">,</span>
-    </template>
-
-    <!-- Collapsible header -->
-    <template v-else>
-      <button
-        @click="toggle"
-        class="inline-flex items-center gap-0.5 hover:opacity-70 transition select-none focus:outline-none"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
-          fill="none" stroke="currentColor" stroke-width="2.5"
-          stroke-linecap="round" stroke-linejoin="round"
-          class="text-slate-400 dark:text-slate-500 shrink-0 transition-transform duration-150"
-          :class="isOpen ? 'rotate-90' : ''"
-        ><path d="M9 18l6-6-6-6" /></svg>
-        <span class="text-slate-500 dark:text-slate-400">{{ bracket.open }}</span>
-      </button>
-
-      <!-- Collapsed pill -->
-      <template v-if="!isOpen">
-        <span class="mx-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400">
-          {{ summary }}
-        </span>
-        <span class="text-slate-500 dark:text-slate-400">{{ bracket.close }}</span>
+      <!-- Primitive -->
+      <template v-if="!isCollapsible">
+        <span :class="valueClass(type)">{{ displayValue() }}</span>
         <span v-if="!isLast" class="text-slate-400">,</span>
       </template>
-    </template>
-    </span><!-- end content span -->
-  </span><!-- end json-line -->
 
-  <!-- Children (only when expanded) -->
+      <!-- Collapsible header -->
+      <template v-else>
+        <button
+          @click="toggle"
+          class="inline-flex items-center gap-0.5 hover:opacity-70 transition select-none focus:outline-none"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round"
+            class="text-slate-400 dark:text-slate-500 shrink-0 transition-transform duration-150"
+            :class="isOpen ? 'rotate-90' : ''"
+          ><path d="M9 18l6-6-6-6" /></svg>
+          <span class="text-slate-500 dark:text-slate-400">{{ bracket.open }}</span>
+        </button>
+
+        <!-- Collapsed pill -->
+        <template v-if="!isOpen">
+          <span class="mx-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400">
+            {{ summary }}
+          </span>
+          <span class="text-slate-500 dark:text-slate-400">{{ bracket.close }}</span>
+          <span v-if="!isLast" class="text-slate-400">,</span>
+        </template>
+      </template>
+    </span>
+  </span>
+
+  <!-- Children (flat — no wrapper div so line numbers stay correct) -->
   <template v-if="isCollapsible && isOpen">
     <JsonNode
       v-for="([k, v], i) in entries"
@@ -136,12 +156,19 @@ function displayValue(): string {
       :depth="depth + 1"
       :isLast="i === entries.length - 1"
       :initialOpen="initialOpen"
+      :guides="childGuides"
     />
 
     <!-- Closing bracket row -->
-    <span class="json-line">
+    <span class="json-line relative">
       <span class="json-ln"></span>
-      <span :style="{ paddingLeft: closeIndent }">
+      <span
+        v-for="(g, gi) in guides"
+        :key="gi"
+        class="absolute top-0 bottom-0 w-px bg-slate-200 dark:bg-white/10 pointer-events-none"
+        :style="{ left: g }"
+      />
+      <span :style="{ paddingLeft: indent }">
         <span class="text-slate-500 dark:text-slate-400">{{ bracket.close }}</span>
         <span v-if="!isLast" class="text-slate-400">,</span>
       </span>
