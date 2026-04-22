@@ -10,6 +10,30 @@ body {
   background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
 }
 
+/* JSON tree line layout */
+.json-line {
+  display: flex;
+  align-items: baseline;
+  min-height: 1.6em;
+}
+/* Sticky line number */
+.json-ln {
+  position: sticky;
+  left: 0;
+  flex-shrink: 0;
+  width: 3rem;
+  padding-right: 0.75rem;
+  text-align: right;
+  color: rgb(148 163 184 / 0.6);
+  user-select: none;
+  pointer-events: none;
+  z-index: 11;
+  background-color: rgb(241 245 249);
+}
+.dark .json-ln {
+  background-color: rgb(30 32 40);
+}
+
 /* Output line rendering — guarantee gutter + code alignment */
 .output-line {
   display: block;

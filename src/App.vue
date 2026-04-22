@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { format, type Language, type Mode, type Indent } from './formatters'
+import JsonTree from './components/JsonTree.vue'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
 import xml from 'highlight.js/lib/languages/xml'
@@ -457,21 +458,31 @@ function clearAll(): void {
         </div>
       </header>
 
-      <div class="flex-1 overflow-auto relative">
+      <div class="flex-1 overflow-hidden relative flex flex-col">
+        <!-- JSON beautify → interactive collapsible tree -->
+        <JsonTree
+          v-if="output && language === 'json' && mode === 'beautify'"
+          :value="output"
+          class="flex-1"
+        />
+
+        <!-- XML / JS or minified JSON → highlighted text -->
         <pre
-          v-if="output"
-          class="hljs px-4 py-5 font-mono text-xs leading-relaxed !bg-transparent"
+          v-else-if="output"
+          class="hljs flex-1 px-4 py-5 font-mono text-xs leading-relaxed !bg-transparent overflow-auto"
         ><code v-html="outputHighlighted"></code></pre>
+
+        <!-- Empty state -->
         <div
           v-else
-          class="h-full flex items-center justify-center text-slate-500 text-sm"
+          class="flex-1 flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm"
         >
           Output will appear here…
         </div>
 
         <div
           v-if="error"
-          class="sticky bottom-3 mx-3 text-xs px-3 py-2 rounded-md bg-red-900/40 text-red-200 border border-red-700/50"
+          class="absolute bottom-3 left-3 right-3 text-xs px-3 py-2 rounded-md bg-red-900/40 text-red-200 border border-red-700/50"
         >
           {{ error }}
         </div>
