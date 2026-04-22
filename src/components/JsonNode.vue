@@ -102,7 +102,7 @@ function displayValue(): string {
     <span
       v-for="(g, gi) in guides"
       :key="gi"
-      class="absolute top-0 bottom-0 w-px bg-slate-200 dark:bg-white/10 pointer-events-none"
+      class="absolute top-0 bottom-0 pointer-events-none border-l border-dashed border-slate-300 dark:border-white/15"
       :style="{ left: g }"
     />
     <span :style="{ paddingLeft: indent }">
@@ -165,7 +165,7 @@ function displayValue(): string {
       <span
         v-for="(g, gi) in guides"
         :key="gi"
-        class="absolute top-0 bottom-0 w-px bg-slate-200 dark:bg-white/10 pointer-events-none"
+        class="absolute top-0 bottom-0 pointer-events-none border-l border-dashed border-slate-300 dark:border-white/15"
         :style="{ left: g }"
       />
       <span :style="{ paddingLeft: indent }">
