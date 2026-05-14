@@ -118,7 +118,7 @@ const piText = computed(() => {
         <span class="text-slate-500 dark:text-slate-400">&lt;</span>
         <span class="text-rose-600 dark:text-rose-400">{{ tagName }}</span>
         <template v-for="(a, i) in attrs" :key="i">
-          <span class="text-slate-400"> </span>
+          <span class="text-slate-400">{{ ' ' }}</span>
           <span class="text-indigo-600 dark:text-indigo-400">{{ a.name }}</span>
           <span class="text-slate-400">=</span>
           <span class="text-green-700 dark:text-green-400">"{{ a.value }}"</span>
