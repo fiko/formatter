@@ -55,8 +55,6 @@ const HTML_VOID_ELEMENTS = new Set([
   'keygen', 'link', 'meta', 'param', 'source', 'track', 'wbr',
 ])
 
-const HTML_INLINE_PRESERVE = new Set(['pre', 'textarea', 'script', 'style'])
-
 export function minifyHTML(input: string): string {
   return input
     .replace(/<!--[\s\S]*?-->/g, '')
@@ -81,7 +79,7 @@ export function beautifyHTML(input: string, indent: Indent = 2): string {
       const isDoctypeOrPI = /^<[!?]/.test(node)
       const isSelfClosing = /\/>$/.test(node)
       const isVoid = HTML_VOID_ELEMENTS.has(tagName)
-      const isInlinePreserve = HTML_INLINE_PRESERVE.has(tagName)
+      const hasInlineClose = /<\/\w/.test(node)
 
       let add = 0
       if (isClosing) {
@@ -90,8 +88,8 @@ export function beautifyHTML(input: string, indent: Indent = 2): string {
         !isSelfClosing &&
         !isVoid &&
         !isDoctypeOrPI &&
-        /^<\w/.test(node) &&
-        !(isInlinePreserve && /<\/\w/.test(node))
+        !hasInlineClose &&
+        /^<\w/.test(node)
       ) {
         add = 1
       }
