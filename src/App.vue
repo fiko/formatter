@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { format, type Language, type Mode, type Indent } from './formatters'
 import JsonTree from './components/JsonTree.vue'
 import XmlTree from './components/XmlTree.vue'
+import HtmlTree from './components/HtmlTree.vue'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
 import xml from 'highlight.js/lib/languages/xml'
@@ -531,6 +532,14 @@ function clearAll(): void {
         <!-- XML beautify → interactive collapsible tree -->
         <XmlTree
           v-else-if="output && language === 'xml' && mode === 'beautify'"
+          :value="output"
+          :indent="indent"
+          class="flex-1"
+        />
+
+        <!-- HTML beautify → interactive collapsible tree -->
+        <HtmlTree
+          v-else-if="output && language === 'html' && mode === 'beautify'"
           :value="output"
           :indent="indent"
           class="flex-1"
