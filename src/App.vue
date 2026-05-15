@@ -300,18 +300,25 @@ function clearAll(): void {
     <p class="mt-2 max-w-md text-sm md:text-base text-indigo-900/70 dark:text-indigo-200/70">
       The URL you're looking for doesn't exist. Try one of the valid formatter routes below.
     </p>
-    <div class="mt-6 font-mono text-xs md:text-sm flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-indigo-900/80 dark:text-indigo-200/80">
-      <a href="/" class="underline hover:text-indigo-600 dark:hover:text-white transition">/json</a>
-      <span>·</span>
-      <a href="/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/xml</a>
-      <span>·</span>
-      <a href="/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/javascript</a>
-      <span class="mx-1">|</span>
-      <a href="/minify" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify</a>
-      <span>·</span>
-      <a href="/minify/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/xml</a>
-      <span>·</span>
-      <a href="/minify/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/javascript</a>
+    <div class="mt-6 font-mono text-xs md:text-sm flex flex-col items-center gap-y-2 text-indigo-900/80 dark:text-indigo-200/80">
+      <div class="flex items-center justify-center gap-x-3 whitespace-nowrap">
+        <a href="/minify" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify</a>
+        <span>·</span>
+        <a href="/minify/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/xml</a>
+        <span>·</span>
+        <a href="/minify/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/javascript</a>
+        <span>·</span>
+        <a href="/minify/html" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/html</a>
+      </div>
+      <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+        <a href="/" class="underline hover:text-indigo-600 dark:hover:text-white transition">/json</a>
+        <span>·</span>
+        <a href="/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/xml</a>
+        <span>·</span>
+        <a href="/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/javascript</a>
+        <span>·</span>
+        <a href="/html" class="underline hover:text-indigo-600 dark:hover:text-white transition">/html</a>
+      </div>
     </div>
     <button
       @click="goHome"
