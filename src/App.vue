@@ -417,10 +417,10 @@ function clearAll(): void {
             >
               {{ l.label }}
             </button>
-            <div class="relative" data-more-menu>
+            <div class="relative inline-flex" data-more-menu>
               <button
                 @click="moreOpen = !moreOpen"
-                class="px-3 py-1 text-xs font-medium rounded-md transition flex items-center"
+                class="px-3 py-1 text-xs font-medium rounded-md transition"
                 :class="isMoreLang || moreOpen
                   ? 'bg-indigo-500 text-white shadow'
                   : 'text-indigo-700 hover:text-indigo-900 dark:text-indigo-200 dark:hover:text-white'"
@@ -428,7 +428,7 @@ function clearAll(): void {
                 aria-haspopup="menu"
                 :aria-expanded="moreOpen"
               >
-                <span class="tracking-widest leading-none">···</span>
+                ···
               </button>
               <div
                 v-if="moreOpen"
