@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { format, type Language, type Mode, type Indent } from './formatters'
 import JsonTree from './components/JsonTree.vue'
 import XmlTree from './components/XmlTree.vue'
+import HtmlTree from './components/HtmlTree.vue'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
 import xml from 'highlight.js/lib/languages/xml'
@@ -65,7 +66,7 @@ onMounted(() => {
 // Supported: /, /json, /xml, /javascript, /minify, /minify/json, /minify/xml, /minify/javascript
 
 type ParsedPath = { mode: Mode; language: Language; notFound: boolean }
-const SLUG_TO_LANG: Record<string, Language> = { json: 'json', xml: 'xml', javascript: 'js', js: 'js' }
+const SLUG_TO_LANG: Record<string, Language> = { json: 'json', xml: 'xml', javascript: 'js', js: 'js', html: 'html' }
 
 function parsePath(pathname: string): ParsedPath {
   const parts = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean)
@@ -99,9 +100,15 @@ const mode = ref<Mode>(initial.mode)
 const indent = ref<Indent>('2')
 
 // Keep URL in sync when user changes language/mode
+const LANG_TO_SLUG: Record<Language, string> = {
+  json: 'json',
+  xml: 'xml',
+  js: 'javascript',
+  html: 'html',
+}
 function syncUrl(): void {
   if (typeof window === 'undefined' || notFound.value) return
-  const langSlug = language.value === 'js' ? 'javascript' : language.value
+  const langSlug = LANG_TO_SLUG[language.value]
   const path =
     mode.value === 'minify' ? `/minify/${langSlug}` : `/${langSlug}`
   if (window.location.pathname !== path) {
@@ -121,6 +128,7 @@ const SAMPLES: Record<Language, string> = {
   json: `{"Name":"John Doe","Sample":"Paste your JSON, XML or JavaScript here..."}`,
   xml: `<?xml version="1.0"?><user><name>John Doe</name><sample>Paste your JSON, XML or JavaScript here...</sample></user>`,
   js: `function greet(name){const msg="Hello, "+name+"!";console.log(msg);return msg;}greet("John Doe");`,
+  html: `<!DOCTYPE html><html><head><title>Hello</title></head><body><h1>Hi, John Doe</h1><p>Paste your HTML here...</p><br><img src="x.png" alt="x"></body></html>`,
 }
 function useSample(): void {
   input.value = SAMPLES[language.value] || SAMPLES.json
@@ -171,9 +179,11 @@ const output = computed(() => {
   }
 })
 
-const hljsLang = computed(() =>
-  language.value === 'js' ? 'javascript' : language.value
-)
+const hljsLang = computed(() => {
+  if (language.value === 'js') return 'javascript'
+  if (language.value === 'html') return 'xml'
+  return language.value
+})
 
 const inputLineItems = computed(() =>
   (input.value.length ? input.value : ' ').split('\n')
@@ -236,6 +246,24 @@ const languages: { id: Language; label: string }[] = [
   { id: 'xml', label: 'XML' },
   { id: 'js', label: 'JavaScript' },
 ]
+const moreLanguages: { id: Language; label: string }[] = [
+  { id: 'html', label: 'HTML' },
+]
+const moreOpen = ref(false)
+const isMoreLang = computed(() =>
+  moreLanguages.some((l) => l.id === language.value)
+)
+function pickMoreLanguage(id: Language): void {
+  language.value = id
+  moreOpen.value = false
+}
+function onDocClick(e: MouseEvent): void {
+  const t = e.target as HTMLElement | null
+  if (!t) return
+  if (!t.closest('[data-more-menu]')) moreOpen.value = false
+}
+onMounted(() => document.addEventListener('click', onDocClick))
+onUnmounted(() => document.removeEventListener('click', onDocClick))
 
 const inputArea = ref<HTMLTextAreaElement | null>(null)
 const inputGutter = ref<HTMLDivElement | null>(null)
@@ -272,18 +300,25 @@ function clearAll(): void {
     <p class="mt-2 max-w-md text-sm md:text-base text-indigo-900/70 dark:text-indigo-200/70">
       The URL you're looking for doesn't exist. Try one of the valid formatter routes below.
     </p>
-    <div class="mt-6 font-mono text-xs md:text-sm flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-indigo-900/80 dark:text-indigo-200/80">
-      <a href="/" class="underline hover:text-indigo-600 dark:hover:text-white transition">/json</a>
-      <span>·</span>
-      <a href="/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/xml</a>
-      <span>·</span>
-      <a href="/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/javascript</a>
-      <span class="mx-1">|</span>
-      <a href="/minify" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify</a>
-      <span>·</span>
-      <a href="/minify/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/xml</a>
-      <span>·</span>
-      <a href="/minify/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/javascript</a>
+    <div class="mt-6 font-mono text-xs md:text-sm flex flex-col items-center gap-y-2 text-indigo-900/80 dark:text-indigo-200/80">
+      <div class="flex items-center justify-center gap-x-3 whitespace-nowrap">
+        <a href="/minify" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify</a>
+        <span>·</span>
+        <a href="/minify/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/xml</a>
+        <span>·</span>
+        <a href="/minify/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/javascript</a>
+        <span>·</span>
+        <a href="/minify/html" class="underline hover:text-indigo-600 dark:hover:text-white transition">/minify/html</a>
+      </div>
+      <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+        <a href="/" class="underline hover:text-indigo-600 dark:hover:text-white transition">/json</a>
+        <span>·</span>
+        <a href="/xml" class="underline hover:text-indigo-600 dark:hover:text-white transition">/xml</a>
+        <span>·</span>
+        <a href="/javascript" class="underline hover:text-indigo-600 dark:hover:text-white transition">/javascript</a>
+        <span>·</span>
+        <a href="/html" class="underline hover:text-indigo-600 dark:hover:text-white transition">/html</a>
+      </div>
     </div>
     <button
       @click="goHome"
@@ -314,7 +349,7 @@ function clearAll(): void {
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.07 11.07 0 015.79 0c2.21-1.49 3.18-1.18 3.18-1.18.62 1.59.23 2.76.11 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.41-5.25 5.69.41.36.78 1.06.78 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.73 18.27.5 12 .5z"/></svg>
             </a>
           </h1>
-          <p class="text-xs text-indigo-700/70 dark:text-indigo-300/70">JSON · XML · JavaScript</p>
+          <p class="text-xs text-indigo-700/70 dark:text-indigo-300/70">JSON · XML · JavaScript · more…</p>
         </div>
         <button
           @click="clearAll"
@@ -390,6 +425,39 @@ function clearAll(): void {
             >
               {{ l.label }}
             </button>
+            <div class="relative inline-flex" data-more-menu>
+              <button
+                @click="moreOpen = !moreOpen"
+                class="px-3 py-1 text-xs font-medium rounded-md transition"
+                :class="isMoreLang || moreOpen
+                  ? 'bg-indigo-500 text-white shadow'
+                  : 'text-indigo-700 hover:text-indigo-900 dark:text-indigo-200 dark:hover:text-white'"
+                :title="isMoreLang ? moreLanguages.find(l => l.id === language)?.label : 'More'"
+                aria-haspopup="menu"
+                :aria-expanded="moreOpen"
+              >
+                ···
+              </button>
+              <div
+                v-if="moreOpen"
+                class="absolute bottom-full mb-2 left-0 z-50 min-w-[8rem] rounded-lg bg-white dark:bg-[#282c34] shadow-xl ring-1 ring-black/10 dark:ring-white/15 py-1"
+                role="menu"
+              >
+                <div class="px-3 py-1 text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">More</div>
+                <button
+                  v-for="l in moreLanguages"
+                  :key="l.id"
+                  @click="pickMoreLanguage(l.id)"
+                  class="w-full text-left px-3 py-1.5 text-xs font-medium transition"
+                  :class="language === l.id
+                    ? 'bg-indigo-500 text-white'
+                    : 'text-slate-700 hover:bg-indigo-50 dark:text-slate-200 dark:hover:bg-white/5'"
+                  role="menuitem"
+                >
+                  {{ l.label }}
+                </button>
+              </div>
+            </div>
           </div>
           <div class="inline-flex rounded-lg bg-white/60 dark:bg-white/10 backdrop-blur p-1">
             <button
@@ -471,6 +539,14 @@ function clearAll(): void {
         <!-- XML beautify → interactive collapsible tree -->
         <XmlTree
           v-else-if="output && language === 'xml' && mode === 'beautify'"
+          :value="output"
+          :indent="indent"
+          class="flex-1"
+        />
+
+        <!-- HTML beautify → interactive collapsible tree -->
+        <HtmlTree
+          v-else-if="output && language === 'html' && mode === 'beautify'"
           :value="output"
           :indent="indent"
           class="flex-1"

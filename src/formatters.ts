@@ -1,6 +1,6 @@
-// Lightweight formatters for JSON, XML and JavaScript.
+// Lightweight formatters for JSON, XML, JavaScript and HTML.
 
-export type Language = 'json' | 'xml' | 'js'
+export type Language = 'json' | 'xml' | 'js' | 'html'
 export type Mode = 'beautify' | 'minify'
 export type Indent = number | string // number of spaces, or 'tab'
 
@@ -42,6 +42,55 @@ export function beautifyXML(input: string, indent: Indent = 2): string {
       if (node.match(/^<\/\w/)) {
         pad = Math.max(pad - 1, 0)
       } else if (node.match(/^<\w[^>]*[^\/]>.*$/) && !node.match(/<\/\w/)) {
+        add = 1
+      }
+      formatted += PADDING.repeat(pad) + node + '\n'
+      pad += add
+    })
+  return formatted.trim()
+}
+
+const HTML_VOID_ELEMENTS = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+  'keygen', 'link', 'meta', 'param', 'source', 'track', 'wbr',
+])
+
+export function minifyHTML(input: string): string {
+  return input
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/>\s+</g, '><')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+export function beautifyHTML(input: string, indent: Indent = 2): string {
+  const html = minifyHTML(input)
+  const PADDING = resolveIndent(indent)
+  let formatted = ''
+  let pad = 0
+  html
+    .replace(/(>)(<)(\/*)/g, '$1\n$2$3')
+    .split('\n')
+    .forEach((node) => {
+      if (!node.trim()) return
+      const tagMatch = node.match(/^<\/?([\w-]+)/)
+      const tagName = tagMatch ? tagMatch[1].toLowerCase() : ''
+      const isClosing = /^<\//.test(node)
+      const isDoctypeOrPI = /^<[!?]/.test(node)
+      const isSelfClosing = /\/>$/.test(node)
+      const isVoid = HTML_VOID_ELEMENTS.has(tagName)
+      const hasInlineClose = /<\/\w/.test(node)
+
+      let add = 0
+      if (isClosing) {
+        pad = Math.max(pad - 1, 0)
+      } else if (
+        !isSelfClosing &&
+        !isVoid &&
+        !isDoctypeOrPI &&
+        !hasInlineClose &&
+        /^<\w/.test(node)
+      ) {
         add = 1
       }
       formatted += PADDING.repeat(pad) + node + '\n'
@@ -109,5 +158,7 @@ export function format(
     return mode === 'minify' ? minifyXML(input) : beautifyXML(input, indent)
   if (language === 'js')
     return mode === 'minify' ? minifyJS(input) : beautifyJS(input, indent)
+  if (language === 'html')
+    return mode === 'minify' ? minifyHTML(input) : beautifyHTML(input, indent)
   return input
 }
